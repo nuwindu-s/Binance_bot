@@ -105,6 +105,40 @@ async function sendWhatsAppNotification(message) {
   }
 }
 
+async function sendPeriodicSummary() {
+  if (!botState.whatsappEnabled) return;
+
+  const latestCandle = marketData.candles[marketData.candles.length - 1];
+  const price = latestCandle ? Number(latestCandle.close) : 0;
+  const len = marketData.candles.length;
+  const rsi = len > 0 ? marketData.indicators.rsi[len - 1] : null;
+  const macd = len > 0 ? marketData.indicators.macd[len - 1] : null;
+
+  const statusEmoji = botState.status === 'RUNNING' ? '🟢' : botState.status === 'PAUSED' ? '🟡' : '⚪';
+  
+  let posText = "None (Flat)";
+  if (botState.position) {
+    const entry = botState.position.entryPrice;
+    const currentPnL = calculateCurrentPnL();
+    posText = `LONG at $${entry.toFixed(2)} (PnL: ${currentPnL >= 0 ? '+' : ''}${currentPnL}%)`;
+  }
+
+  const hours = Math.floor(botState.runTime / 3600);
+  const minutes = Math.floor((botState.runTime % 3600) / 60);
+  const uptimeText = `${hours}h ${minutes}m`;
+
+  const text = `📊 SOLANA Bot Periodic Summary (30m)\n\n` +
+    `• Bot Status: ${statusEmoji} ${botState.status}\n` +
+    `• Strategy Mode: ${botState.strategy}\n` +
+    `• Wallet Balance: $${botState.balance.toFixed(2)}\n` +
+    `• Active Position: ${posText}\n` +
+    `• Live SOL Price: $${price.toFixed(2)}\n` +
+    `• Market Metrics: RSI: ${rsi ? rsi.toFixed(1) : 'N/A'} | MACD Hist: ${macd?.hist ? macd.hist.toFixed(3) : 'N/A'}\n` +
+    `• Bot Uptime: ${uptimeText}`;
+
+  await sendWhatsAppNotification(text);
+}
+
 // ----------------------------------------------------
 // Technical Indicator Calculations (JS native implementations)
 // ----------------------------------------------------
@@ -826,6 +860,46 @@ app.post('/api/bot/configure', (req, res) => {
   res.json({ success: true, botState });
 });
 
+// Test WhatsApp connection and credentials
+app.post('/api/bot/whatsapp/test', async (req, res) => {
+  const { whatsappType, whatsappApiKey, whatsappRecipient, whatsappWebhookUrl } = req.body;
+  
+  const originalEnabled = botState.whatsappEnabled;
+  const originalType = botState.whatsappType;
+  const originalKey = botState.whatsappApiKey;
+  const originalRecipient = botState.whatsappRecipient;
+  const originalWebhook = botState.whatsappWebhookUrl;
+
+  botState.whatsappEnabled = true;
+  if (whatsappType !== undefined) botState.whatsappType = whatsappType;
+  if (whatsappApiKey !== undefined) botState.whatsappApiKey = whatsappApiKey;
+  if (whatsappRecipient !== undefined) botState.whatsappRecipient = whatsappRecipient;
+  if (whatsappWebhookUrl !== undefined) botState.whatsappWebhookUrl = whatsappWebhookUrl;
+
+  try {
+    logEvent("Triggered manual WhatsApp connection test message", "SYSTEM");
+    const testMessage = `🧪 SOLANA Bot Connection Test\n\nYour WhatsApp alert link is configured successfully! You will receive live trading alert confluences and 30-minute periodic reports here.`;
+    
+    await sendWhatsAppNotification(testMessage);
+
+    botState.whatsappEnabled = originalEnabled;
+    botState.whatsappType = originalType;
+    botState.whatsappApiKey = originalKey;
+    botState.whatsappRecipient = originalRecipient;
+    botState.whatsappWebhookUrl = originalWebhook;
+
+    res.json({ success: true, message: "Test alert dispatched to WhatsApp." });
+  } catch (err) {
+    botState.whatsappEnabled = originalEnabled;
+    botState.whatsappType = originalType;
+    botState.whatsappApiKey = originalKey;
+    botState.whatsappRecipient = originalRecipient;
+    botState.whatsappWebhookUrl = originalWebhook;
+
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Run backtester simulation
 app.post('/api/bot/backtest', (req, res) => {
   const { strategy, stopLossPct, takeProfitPct } = req.body;
@@ -1102,6 +1176,11 @@ wss.on('connection', (ws) => {
 async function boot() {
   await fetchInitialHistory();
   initBinanceFeed();
+
+  // Trigger WhatsApp periodic status summary every 30 minutes
+  setInterval(() => {
+    sendPeriodicSummary();
+  }, 30 * 60 * 1000);
 }
 
 boot();

@@ -329,6 +329,30 @@ export default function App() {
     }
   };
 
+  // Trigger manual WhatsApp alert configuration test
+  const handleTestWhatsApp = async (params: {
+    whatsappType: 'TEXTMEBOT' | 'CUSTOM_WEBHOOK';
+    whatsappApiKey: string;
+    whatsappRecipient: string;
+    whatsappWebhookUrl: string;
+  }) => {
+    try {
+      const res = await fetch(`${API_BASE}/bot/whatsapp/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('🟢 Test Message Dispatched! Check your WhatsApp group.');
+      } else {
+        alert(`❌ Failed to send test: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      alert(`❌ Error sending test: ${err.message}`);
+    }
+  };
+
   // Send chatbot prompt to analysis server
   const handleSendPrompt = async (text: string): Promise<string> => {
     const res = await fetch(`${API_BASE}/ai/analyze`, {
@@ -462,6 +486,7 @@ export default function App() {
                 config={botState}
                 onUpdateConfig={handleUpdateConfig}
                 onRunBacktest={handleRunBacktest}
+                onTestWhatsApp={handleTestWhatsApp}
               />
             </div>
           </div>

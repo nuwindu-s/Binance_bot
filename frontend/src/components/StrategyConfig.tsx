@@ -20,9 +20,15 @@ interface StrategyConfigProps {
   config: BotConfig;
   onUpdateConfig: (updated: Partial<BotConfig>) => void;
   onRunBacktest: () => void;
+  onTestWhatsApp: (whatsappParams: {
+    whatsappType: 'TEXTMEBOT' | 'CUSTOM_WEBHOOK';
+    whatsappApiKey: string;
+    whatsappRecipient: string;
+    whatsappWebhookUrl: string;
+  }) => Promise<void>;
 }
 
-export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdateConfig, onRunBacktest }) => {
+export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdateConfig, onRunBacktest, onTestWhatsApp }) => {
   const [strategy, setStrategy] = useState(config.strategy);
   const [riskLevel, setRiskLevel] = useState(config.riskLevel);
   const [tradeSize, setTradeSize] = useState(config.tradeSize);
@@ -34,6 +40,15 @@ export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdate
   const [whatsappApiKey, setWhatsappApiKey] = useState(config.whatsappApiKey || '');
   const [whatsappRecipient, setWhatsappRecipient] = useState(config.whatsappRecipient || '');
   const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState(config.whatsappWebhookUrl || '');
+
+  const handleTestWhatsApp = () => {
+    onTestWhatsApp({
+      whatsappType,
+      whatsappApiKey,
+      whatsappRecipient,
+      whatsappWebhookUrl
+    });
+  };
 
   // Sync state if backend updates
   useEffect(() => {
@@ -262,6 +277,15 @@ export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdate
                   </div>
                 </>
               )}
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleTestWhatsApp}
+                style={{ fontSize: '0.75rem', padding: '6px', width: '100%', marginTop: '6px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <span>🧪 Send Test Message to WhatsApp</span>
+              </button>
             </div>
           )}
         </div>
