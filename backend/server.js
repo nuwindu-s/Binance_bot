@@ -84,6 +84,14 @@ async function sendWhatsAppNotification(message) {
       const url = `https://api.textmebot.com/send.php?recipient=${encodeURIComponent(botState.whatsappRecipient)}&apikey=${encodeURIComponent(botState.whatsappApiKey)}&text=${encodeURIComponent(message)}`;
       await axios.get(url);
       console.log(`[WhatsApp] Sent notification via TextMeBot to ${botState.whatsappRecipient}`);
+    } else if (botState.whatsappType === 'CALLMEBOT') {
+      if (!botState.whatsappApiKey || !botState.whatsappRecipient) {
+        console.error("WhatsApp Error: API Key or Recipient is missing for CallMeBot");
+        return;
+      }
+      const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(botState.whatsappRecipient)}&apikey=${encodeURIComponent(botState.whatsappApiKey)}&text=${encodeURIComponent(message)}`;
+      await axios.get(url);
+      console.log(`[WhatsApp] Sent notification via CallMeBot to ${botState.whatsappRecipient}`);
     } else if (botState.whatsappType === 'CUSTOM_WEBHOOK') {
       if (!botState.whatsappWebhookUrl) {
         console.error("WhatsApp Error: Webhook URL is missing");

@@ -56,7 +56,7 @@ interface BotState {
   logs: any[];
   currentPnL: number;
   whatsappEnabled?: boolean;
-  whatsappType?: 'TEXTMEBOT' | 'CUSTOM_WEBHOOK';
+  whatsappType?: 'TEXTMEBOT' | 'CALLMEBOT' | 'CUSTOM_WEBHOOK';
   whatsappApiKey?: string;
   whatsappRecipient?: string;
   whatsappWebhookUrl?: string;
@@ -329,9 +329,8 @@ export default function App() {
     }
   };
 
-  // Trigger manual WhatsApp alert configuration test
   const handleTestWhatsApp = async (params: {
-    whatsappType: 'TEXTMEBOT' | 'CUSTOM_WEBHOOK';
+    whatsappType: 'TEXTMEBOT' | 'CALLMEBOT' | 'CUSTOM_WEBHOOK';
     whatsappApiKey: string;
     whatsappRecipient: string;
     whatsappWebhookUrl: string;

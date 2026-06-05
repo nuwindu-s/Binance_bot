@@ -10,7 +10,7 @@ interface BotConfig {
   stopLossPct: number;
   takeProfitPct: number;
   whatsappEnabled?: boolean;
-  whatsappType?: 'TEXTMEBOT' | 'CUSTOM_WEBHOOK';
+  whatsappType?: 'TEXTMEBOT' | 'CALLMEBOT' | 'CUSTOM_WEBHOOK';
   whatsappApiKey?: string;
   whatsappRecipient?: string;
   whatsappWebhookUrl?: string;
@@ -21,7 +21,7 @@ interface StrategyConfigProps {
   onUpdateConfig: (updated: Partial<BotConfig>) => void;
   onRunBacktest: () => void;
   onTestWhatsApp: (whatsappParams: {
-    whatsappType: 'TEXTMEBOT' | 'CUSTOM_WEBHOOK';
+    whatsappType: 'TEXTMEBOT' | 'CALLMEBOT' | 'CUSTOM_WEBHOOK';
     whatsappApiKey: string;
     whatsappRecipient: string;
     whatsappWebhookUrl: string;
@@ -221,16 +221,19 @@ export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdate
                   className="form-input"
                   style={{ backgroundColor: 'var(--bg-primary)', fontSize: '0.75rem', padding: '6px', height: '32px' }}
                 >
-                  <option value="TEXTMEBOT">TextMeBot (Free, Instant API)</option>
+                  <option value="TEXTMEBOT">TextMeBot (Free Group Alerts)</option>
+                  <option value="CALLMEBOT">CallMeBot (Free Personal Alerts)</option>
                   <option value="CUSTOM_WEBHOOK">Custom HTTP Webhook URL</option>
                 </select>
               </div>
 
-              {whatsappType === 'TEXTMEBOT' ? (
+              {(whatsappType === 'TEXTMEBOT' || whatsappType === 'CALLMEBOT') ? (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ fontSize: '0.7rem' }}>TextMeBot API Key</label>
+                      <label className="form-label" style={{ fontSize: '0.7rem' }}>
+                        {whatsappType === 'TEXTMEBOT' ? 'TextMeBot API Key' : 'CallMeBot API Key'}
+                      </label>
                       <input
                         type="text"
                         value={whatsappApiKey}
@@ -241,22 +244,35 @@ export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdate
                       />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ fontSize: '0.7rem' }}>Group ID or Phone</label>
+                      <label className="form-label" style={{ fontSize: '0.7rem' }}>
+                        {whatsappType === 'TEXTMEBOT' ? 'Group ID or Phone' : 'Recipient Phone Number'}
+                      </label>
                       <input
                         type="text"
                         value={whatsappRecipient}
                         onChange={(e) => setWhatsappRecipient(e.target.value)}
-                        placeholder="e.g. 1203630248239@g.us"
+                        placeholder={whatsappType === 'TEXTMEBOT' ? 'e.g. 1203630248239@g.us' : 'e.g. +94703382510'}
                         className="form-input"
                         style={{ fontSize: '0.75rem', padding: '6px', height: '32px' }}
                       />
                     </div>
                   </div>
                   <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
-                    💡 <strong>Setup Group Alerts</strong>:<br/>
-                    1. Invite the TextMeBot number (<code>+34 611 22 85 54</code>) to your WhatsApp Group.<br/>
-                    2. Register/activate TextMeBot by sending them a message to get your API Key.<br/>
-                    3. Get your Group ID by calling <code>https://api.textmebot.com/getGroupId.php</code> and enter it above to enable free group notifications.
+                    {whatsappType === 'TEXTMEBOT' ? (
+                      <>
+                        💡 <strong>Setup Group Alerts</strong>:<br/>
+                        1. Visit <code>textmebot.com</code> and click "Request API Key" to sign up with your email.<br/>
+                        2. Invite the TextMeBot number (<code>+34 611 22 85 54</code>) to your WhatsApp Group.<br/>
+                        3. Retrieve your Group ID by calling <code>https://api.textmebot.com/getGroupId.php</code> and input it as recipient.
+                      </>
+                    ) : (
+                      <>
+                        💡 <strong>Setup Personal Alerts</strong>:<br/>
+                        1. Add <strong><code>+34 644 66 32 62</code></strong> to your WhatsApp contacts.<br/>
+                        2. Send them the message: <code>I allow callmebot to send me messages</code>.<br/>
+                        3. Paste the returned API Key, and enter your phone number (with country code e.g. <code>+94703382510</code>) as recipient.
+                      </>
+                    )}
                   </div>
                 </>
               ) : (
