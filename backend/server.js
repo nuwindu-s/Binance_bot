@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 const app = express();
 
 app.use(cors());
@@ -996,7 +996,12 @@ app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Fallback index handler for SPAs
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'), (err) => {
+    if (err) {
+      console.error("Failed to send index.html:", err);
+      res.status(500).send("Unified build index not found. Verify frontend has been built successfully.");
+    }
+  });
 });
 
 // Start Express Server
