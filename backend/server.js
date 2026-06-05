@@ -11,6 +11,9 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 5001;
 const app = express();
 
+let apiDomain = 'api.binance.com';
+let wsDomain = 'stream.binance.com:9443';
+
 app.use(cors());
 app.use(express.json());
 
@@ -587,13 +590,13 @@ function initBinanceFeed() {
     binanceWS.close();
   }
 
-  logEvent("Connecting to live Binance Solana Stream...", "SYSTEM");
+  logEvent(`Connecting to live Binance Solana Stream at wss://${wsDomain}...`, "SYSTEM");
   
   // Binance Websocket API URL for live 1-minute klines
-  binanceWS = new WebSocket("wss://stream.binance.com:9443/ws/solusdt@kline_1m");
+  binanceWS = new WebSocket(`wss://${wsDomain}/ws/solusdt@kline_1m`);
 
   binanceWS.on('open', () => {
-    logEvent("Established WebSocket stream from Binance SOL/USDT", "SYSTEM");
+    logEvent(`Established WebSocket stream from Binance SOL/USDT (${wsDomain})`, "SYSTEM");
   });
 
   binanceWS.on('message', (data) => {
@@ -658,15 +661,20 @@ function initBinanceFeed() {
 
   binanceWS.on('error', (err) => {
     logEvent("Binance WebSocket stream error: " + err.message, "ERROR");
+    if (wsDomain === 'stream.binance.com:9443') {
+      logEvent("Switching WebSocket to Binance.US fallback due to connection error...", "WARNING");
+      wsDomain = 'stream.binance.us:9443';
+      apiDomain = 'api.binance.us';
+    }
   });
 }
 
 // Fetch historical candles from Binance REST API on startup
 async function fetchInitialHistory() {
   try {
-    logEvent("Fetching historical candle data for SOL/USDT...", "SYSTEM");
+    logEvent(`Fetching historical candle data for SOL/USDT from ${apiDomain}...`, "SYSTEM");
     const response = await axios.get(
-      'https://api.binance.com/api/v3/klines?symbol=SOLUSDT&interval=1m&limit=150'
+      `https://${apiDomain}/api/v3/klines?symbol=SOLUSDT&interval=1m&limit=150`
     );
 
     const candles = response.data.map(item => ({
@@ -683,7 +691,13 @@ async function fetchInitialHistory() {
     calculateIndicators();
     logEvent(`Loaded ${candles.length} periods of historical candlestick data. Ready for trading.`, "SYSTEM");
   } catch (err) {
-    logEvent("Failed to load historical candles: " + err.message, "ERROR");
+    logEvent(`Failed to load historical candles from ${apiDomain}: ${err.message}`, "ERROR");
+    if (apiDomain === 'api.binance.com') {
+      logEvent("Switching to Binance.US fallback endpoint due to regional/IP block...", "WARNING");
+      apiDomain = 'api.binance.us';
+      wsDomain = 'stream.binance.us:9443';
+      await fetchInitialHistory();
+    }
   }
 }
 
