@@ -55,6 +55,11 @@ interface BotState {
   lastSignal: string;
   logs: any[];
   currentPnL: number;
+  whatsappEnabled?: boolean;
+  whatsappType?: 'TEXTMEBOT' | 'CUSTOM_WEBHOOK';
+  whatsappApiKey?: string;
+  whatsappRecipient?: string;
+  whatsappWebhookUrl?: string;
 }
 
 const isProd = window.location.hostname !== 'localhost';
@@ -87,7 +92,12 @@ export default function App() {
     runTime: 0,
     lastSignal: 'NONE',
     logs: [],
-    currentPnL: 0
+    currentPnL: 0,
+    whatsappEnabled: false,
+    whatsappType: 'TEXTMEBOT',
+    whatsappApiKey: '',
+    whatsappRecipient: '',
+    whatsappWebhookUrl: ''
   });
 
   const [isConnected, setIsConnected] = useState(false);

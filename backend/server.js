@@ -47,7 +47,12 @@ let botState = {
   takeProfitPct: 4.0,  // take profit percentage
   runTime: 0,       // in seconds
   lastSignal: 'NONE',
-  logs: []          // list of system/bot event logs
+  logs: [],          // list of system/bot event logs
+  whatsappEnabled: false,
+  whatsappType: 'TEXTMEBOT',
+  whatsappApiKey: '',
+  whatsappRecipient: '',
+  whatsappWebhookUrl: ''
 };
 
 let clients = new Set();
@@ -65,6 +70,39 @@ function logEvent(message, type = 'INFO') {
   if (botState.logs.length > 200) botState.logs.pop();
   console.log(`[${type}] ${new Date().toISOString()}: ${message}`);
   broadcast({ type: 'LOG', log: logEntry });
+}
+
+async function sendWhatsAppNotification(message) {
+  if (!botState.whatsappEnabled) return;
+
+  try {
+    if (botState.whatsappType === 'TEXTMEBOT') {
+      if (!botState.whatsappApiKey || !botState.whatsappRecipient) {
+        console.error("WhatsApp Error: API Key or Recipient is missing for TextMeBot");
+        return;
+      }
+      const url = `https://api.textmebot.com/send.php?recipient=${encodeURIComponent(botState.whatsappRecipient)}&apikey=${encodeURIComponent(botState.whatsappApiKey)}&text=${encodeURIComponent(message)}`;
+      await axios.get(url);
+      console.log(`[WhatsApp] Sent notification via TextMeBot to ${botState.whatsappRecipient}`);
+    } else if (botState.whatsappType === 'CUSTOM_WEBHOOK') {
+      if (!botState.whatsappWebhookUrl) {
+        console.error("WhatsApp Error: Webhook URL is missing");
+        return;
+      }
+      await axios.post(botState.whatsappWebhookUrl, {
+        text: message,
+        timestamp: Date.now(),
+        botState: {
+          strategy: botState.strategy,
+          balance: botState.balance,
+          position: botState.position
+        }
+      });
+      console.log(`[WhatsApp] Sent notification via custom webhook to ${botState.whatsappWebhookUrl}`);
+    }
+  } catch (err) {
+    console.error("Failed to send WhatsApp notification:", err.message);
+  }
 }
 
 // ----------------------------------------------------
@@ -388,6 +426,7 @@ function triggerCandleClosedAlerts(candle) {
 
     logEvent(`MARKET ALERT: [${alertType}] at $${price.toFixed(2)} - ${alertReason}`, 'SYSTEM');
     broadcast({ type: 'MARKET_ALERT', alert });
+    sendWhatsAppNotification(`🚨 SOLANA MARKET ALERT: [${alertType}] at $${price.toFixed(2)}\n\nReason: ${alertReason}`);
   }
 }
 
@@ -519,6 +558,7 @@ function executeBuy(price, reason, timestamp) {
 
   logEvent(`BUY SIGNAL: Entered LONG position at $${price.toFixed(2)} (${amount} SOL) | Reason: ${reason}`, 'BUY');
   broadcastState();
+  sendWhatsAppNotification(`🟢 BOT BUY SIGNAL: Entered LONG position at $${price.toFixed(2)} (${amount} SOL)\n\nReason: ${reason}`);
 }
 
 function executeSell(price, reason, timestamp) {
@@ -550,6 +590,7 @@ function executeSell(price, reason, timestamp) {
 
   logEvent(`SELL SIGNAL: Closed LONG at $${price.toFixed(2)} | Net Trade PnL: $${pnl.toFixed(2)} (${pnlPct.toFixed(2)}%) | Reason: ${reason}`, 'SELL');
   broadcastState();
+  sendWhatsAppNotification(`🔴 BOT SELL SIGNAL: Closed LONG at $${price.toFixed(2)}\n\nNet Trade PnL: $${pnl.toFixed(2)} (${pnlPct.toFixed(2)}%)\n\nReason: ${reason}`);
 }
 
 // ----------------------------------------------------
@@ -724,13 +765,22 @@ app.get('/api/bot/state', (req, res) => {
 });
 
 app.post('/api/bot/configure', (req, res) => {
-  const { strategy, status, balance, stopLossPct, takeProfitPct, tradeSize, riskLevel } = req.body;
+  const { 
+    strategy, status, balance, stopLossPct, takeProfitPct, tradeSize, riskLevel,
+    whatsappEnabled, whatsappType, whatsappApiKey, whatsappRecipient, whatsappWebhookUrl
+  } = req.body;
 
   if (strategy !== undefined) botState.strategy = strategy;
   if (stopLossPct !== undefined) botState.stopLossPct = Number(stopLossPct);
   if (takeProfitPct !== undefined) botState.takeProfitPct = Number(takeProfitPct);
   if (tradeSize !== undefined) botState.tradeSize = Number(tradeSize);
   if (riskLevel !== undefined) botState.riskLevel = riskLevel;
+
+  if (whatsappEnabled !== undefined) botState.whatsappEnabled = !!whatsappEnabled;
+  if (whatsappType !== undefined) botState.whatsappType = whatsappType;
+  if (whatsappApiKey !== undefined) botState.whatsappApiKey = whatsappApiKey;
+  if (whatsappRecipient !== undefined) botState.whatsappRecipient = whatsappRecipient;
+  if (whatsappWebhookUrl !== undefined) botState.whatsappWebhookUrl = whatsappWebhookUrl;
 
   if (balance !== undefined) {
     botState.balance = Number(balance);

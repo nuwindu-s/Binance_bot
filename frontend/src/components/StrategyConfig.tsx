@@ -9,6 +9,11 @@ interface BotConfig {
   tradeSize: number;
   stopLossPct: number;
   takeProfitPct: number;
+  whatsappEnabled?: boolean;
+  whatsappType?: 'TEXTMEBOT' | 'CUSTOM_WEBHOOK';
+  whatsappApiKey?: string;
+  whatsappRecipient?: string;
+  whatsappWebhookUrl?: string;
 }
 
 interface StrategyConfigProps {
@@ -24,6 +29,11 @@ export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdate
   const [stopLoss, setStopLoss] = useState(config.stopLossPct);
   const [takeProfit, setTakeProfit] = useState(config.takeProfitPct);
   const [simBalance, setSimBalance] = useState(config.balance);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(config.whatsappEnabled || false);
+  const [whatsappType, setWhatsappType] = useState(config.whatsappType || 'TEXTMEBOT');
+  const [whatsappApiKey, setWhatsappApiKey] = useState(config.whatsappApiKey || '');
+  const [whatsappRecipient, setWhatsappRecipient] = useState(config.whatsappRecipient || '');
+  const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState(config.whatsappWebhookUrl || '');
 
   // Sync state if backend updates
   useEffect(() => {
@@ -33,6 +43,11 @@ export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdate
     setStopLoss(config.stopLossPct);
     setTakeProfit(config.takeProfitPct);
     setSimBalance(config.balance);
+    setWhatsappEnabled(config.whatsappEnabled || false);
+    setWhatsappType(config.whatsappType || 'TEXTMEBOT');
+    setWhatsappApiKey(config.whatsappApiKey || '');
+    setWhatsappRecipient(config.whatsappRecipient || '');
+    setWhatsappWebhookUrl(config.whatsappWebhookUrl || '');
   }, [config]);
 
   const handleApply = (e: React.FormEvent) => {
@@ -42,7 +57,12 @@ export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdate
       riskLevel,
       tradeSize: Number(tradeSize),
       stopLossPct: Number(stopLoss),
-      takeProfitPct: Number(takeProfit)
+      takeProfitPct: Number(takeProfit),
+      whatsappEnabled,
+      whatsappType,
+      whatsappApiKey,
+      whatsappRecipient,
+      whatsappWebhookUrl
     });
   };
 
@@ -154,6 +174,96 @@ export const StrategyConfig: React.FC<StrategyConfigProps> = ({ config, onUpdate
               max="50"
             />
           </div>
+        </div>
+
+        {/* WhatsApp Notification Integration */}
+        <div style={{ marginTop: '14px', borderTop: '1px dashed var(--border-color)', paddingTop: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <label className="form-label" style={{ margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>WhatsApp Alerts Link</span>
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <input
+                type="checkbox"
+                id="whatsapp-toggle"
+                checked={whatsappEnabled}
+                onChange={(e) => setWhatsappEnabled(e.target.checked)}
+                style={{ cursor: 'pointer', accentColor: 'var(--color-accent)' }}
+              />
+              <label htmlFor="whatsapp-toggle" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                {whatsappEnabled ? 'Enabled' : 'Disabled'}
+              </label>
+            </div>
+          </div>
+
+          {whatsappEnabled && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '10px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.7rem' }}>API Gateway Provider</label>
+                <select
+                  value={whatsappType}
+                  onChange={(e) => setWhatsappType(e.target.value as any)}
+                  className="form-input"
+                  style={{ backgroundColor: 'var(--bg-primary)', fontSize: '0.75rem', padding: '6px', height: '32px' }}
+                >
+                  <option value="TEXTMEBOT">TextMeBot (Free, Instant API)</option>
+                  <option value="CUSTOM_WEBHOOK">Custom HTTP Webhook URL</option>
+                </select>
+              </div>
+
+              {whatsappType === 'TEXTMEBOT' ? (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.7rem' }}>TextMeBot API Key</label>
+                      <input
+                        type="text"
+                        value={whatsappApiKey}
+                        onChange={(e) => setWhatsappApiKey(e.target.value)}
+                        placeholder="apikey-xxxx"
+                        className="form-input"
+                        style={{ fontSize: '0.75rem', padding: '6px', height: '32px' }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.7rem' }}>Group ID or Phone</label>
+                      <input
+                        type="text"
+                        value={whatsappRecipient}
+                        onChange={(e) => setWhatsappRecipient(e.target.value)}
+                        placeholder="e.g. 1203630248239@g.us"
+                        className="form-input"
+                        style={{ fontSize: '0.75rem', padding: '6px', height: '32px' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                    💡 <strong>Setup Group Alerts</strong>:<br/>
+                    1. Invite the TextMeBot number (<code>+34 611 22 85 54</code>) to your WhatsApp Group.<br/>
+                    2. Register/activate TextMeBot by sending them a message to get your API Key.<br/>
+                    3. Get your Group ID by calling <code>https://api.textmebot.com/getGroupId.php</code> and enter it above to enable free group notifications.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.7rem' }}>Custom Webhook URL</label>
+                    <input
+                      type="text"
+                      value={whatsappWebhookUrl}
+                      onChange={(e) => setWhatsappWebhookUrl(e.target.value)}
+                      placeholder="https://api.example.com/whatsapp-webhook"
+                      className="form-input"
+                      style={{ fontSize: '0.75rem', padding: '6px', height: '32px' }}
+                    />
+                  </div>
+                  <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                    💡 <strong>Integration details</strong>: Server will dispatch HTTP POST JSON alerts containing: <code>{`{ text, timestamp, botState }`}</code> directly to this endpoint.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
